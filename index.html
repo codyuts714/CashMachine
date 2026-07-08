@@ -69,6 +69,15 @@
   .flex-between{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
   .flex-between h2{margin-bottom:0;}
   .empty{color:var(--muted); font-size:12px; padding:14px 10px; font-style:italic;}
+  .goal-row{display:flex; align-items:center; gap:14px; padding:12px 4px; border-bottom:1px solid #1e1e1e;}
+  .goal-row:last-child{border-bottom:none;}
+  .goal-check{width:20px; height:20px; accent-color:var(--gold); cursor:pointer; flex-shrink:0;}
+  .goal-name{flex:1 1 auto; font-size:13px; font-weight:600;}
+  .goal-name.done{color:var(--muted); text-decoration:line-through;}
+  .goal-name small{display:block; font-weight:400; color:var(--muted); font-size:11px; margin-top:2px;}
+  .goal-bar-wrap{flex:2 1 200px; min-width:140px;}
+  .goal-nums{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); text-align:right; margin-bottom:4px;}
+  .goal-nums b{color:var(--gold);}
   @media (prefers-reduced-motion: reduce){ .bar-fill{transition:none;} }
   @media (max-width:600px){ body{padding:14px;} .stat-value{font-size:24px;} }
 </style>
@@ -178,7 +187,7 @@
     <button onclick="addDebt()" id="debtBtn">Add</button>
   </div>
   <table>
-    <thead><tr><th>Order</th><th>Debt</th><th style="text-align:right">Balance</th><th style="text-align:right">APR</th><th style="text-align:right">Min</th><th></th></tr></thead>
+    <thead><tr><th>Order</th><th>Debt</th><th style="text-align:right">Balance</th><th style="text-align:right">APR</th><th style="text-align:right">Min</th><th style="text-align:right">Paid by</th><th></th></tr></thead>
     <tbody id="debtBody"></tbody>
   </table>
   <div class="form-row" style="margin-top:14px; align-items:center;">
@@ -222,6 +231,22 @@
   <div class="note">Goal = 1 month of burn first. Once you cross it, the goal automatically becomes 3 months.</div>
 </section>
 
+<section>
+  <h2>Financial Goals — the why behind the grind</h2>
+  <div class="form-row">
+    <input class="grow" id="goalName" placeholder="Goal (get passport, passive income...)">
+    <select id="goalType" style="flex:1 1 130px;">
+      <option value="milestone">Milestone ✓</option>
+      <option value="money">$ Target</option>
+    </select>
+    <input class="num" type="number" id="goalTarget" placeholder="Target $">
+    <input class="num" type="number" id="goalCurrent" placeholder="Current $">
+    <button onclick="addGoal()" id="goalBtn">Add</button>
+  </div>
+  <div id="goalList"></div>
+  <div class="note">The runway goal tracks itself from your buffer and burn. For $ targets, hit <em>edit</em> to update your current number as it grows. Milestones just get checked off and stay as trophies.</div>
+</section>
+
 <div class="note" style="text-align:center; padding-bottom:20px;">
   Data saves in this browser automatically. Use Export backup before switching machines — same pattern as Daily OS.
 </div>
@@ -234,13 +259,13 @@ const KEY = 'uts-money-os';
 
 /* ============ FIREBASE CONFIG — paste yours here ============ */
 const FIREBASE_CONFIG = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE.firebaseapp.com",
-  databaseURL: "https://PASTE-default-rtdb.firebaseio.com",
-  projectId: "PASTE",
-  storageBucket: "PASTE.appspot.com",
-  messagingSenderId: "PASTE",
-  appId: "PASTE"
+  apiKey: "AIzaSyBgXgV90wWvafA2PO-tY9J-286fKK9IW28",
+  authDomain: "cashmachine-105d1.firebaseapp.com",
+  databaseURL: "https://cashmachine-105d1-default-rtdb.firebaseio.com",
+  projectId: "cashmachine-105d1",
+  storageBucket: "cashmachine-105d1.firebasestorage.app",
+  messagingSenderId: "941616773003",
+  appId: "1:941616773003:web:652956957986e1279f618e"
 };
 /* ============================================================ */
 
@@ -313,6 +338,7 @@ function attachRef(){
     fb.applyingRemote = true;
     state = {...state, ...val.data, editingExp:null, editingDebt:null, editingCol:null};
     if(!Array.isArray(state.collections)) state.collections = [];
+    seedGoals();
     document.getElementById('extraPay').value = state.extraPay || '';
     document.getElementById('bufferSaved').value = state.bufferSaved || '';
     if(state.pcts){ ['Tax','Buffer','Debt','Ops'].forEach(k=>{ if(state.pcts[k]!=null) document.getElementById('pct'+k).value = state.pcts[k]; }); }
@@ -328,7 +354,7 @@ function pushState(immediate){
     setSyncStatus('syncing');
     fb.ref.set({
       _writer: fb.clientId, _ts: Date.now(),
-      data: { expenses:state.expenses, debts:state.debts, collections:state.collections,
+      data: { expenses:state.expenses, debts:state.debts, collections:state.collections, goals:state.goals,
               strategy:state.strategy, extraPay:state.extraPay, bufferSaved:state.bufferSaved, pcts:state.pcts }
     }).then(()=>setSyncStatus('synced')).catch(()=>setSyncStatus('offline'));
   };
@@ -472,11 +498,13 @@ function sortedDebts(){
   return [...state.debts].sort((a,b)=> state.strategy==='avalanche' ? b.apr - a.apr : a.bal - b.bal);
 }
 function simulatePayoff(){
-  let debts = sortedDebts().map(d=>({...d}));
+  const order = sortedDebts();
+  let debts = order.map(d=>({...d, origIdx: state.debts.indexOf(d)}));
   const extra = +document.getElementById('extraPay').value || 0;
   const totalMin = debts.reduce((s,d)=>s+d.min,0);
   if(!debts.length) return null;
   let months = 0, interest = 0;
+  const paidMonth = {};
   while(debts.some(d=>d.bal > 0) && months < 600){
     months++;
     let pool = totalMin + extra;
@@ -490,32 +518,46 @@ function simulatePayoff(){
       if(pool <= 0) break;
       if(d.bal > 0){ const pay = Math.min(pool, d.bal); d.bal -= pay; pool -= pay; }
     }
+    for(const d of debts){
+      if(d.bal <= 0.005 && paidMonth[d.origIdx] == null){ d.bal = 0; paidMonth[d.origIdx] = months; }
+    }
     if(pool === totalMin + extra) break; // nothing payable — mins are zero
   }
   if(months >= 600) return {stuck:true};
-  return {months, interest};
+  return {months, interest, paidMonth};
+}
+function payoffDateStr(m){
+  const d = new Date(); d.setMonth(d.getMonth() + m);
+  return d.toLocaleDateString('en-US',{month:'short', year:'numeric'});
 }
 function renderDebts(){
   const body = document.getElementById('debtBody');
   const sorted = sortedDebts();
-  if(!sorted.length){ body.innerHTML = '<tr><td colspan="6" class="empty">No debts added. Add every balance — cards, loans, collections, all of it.</td></tr>'; }
+  const result = state.debts.length ? simulatePayoff() : null;
+  if(!sorted.length){ body.innerHTML = '<tr><td colspan="7" class="empty">No debts added. Add every balance — cards, loans, all of it.</td></tr>'; }
   else body.innerHTML = sorted.map((d,i)=>{
     const origIdx = state.debts.indexOf(d);
-    return `<tr><td><span class="order-tag">${i+1}</span></td><td>${d.name}</td>
+    let paidBy = '<span style="color:var(--muted)">—</span>';
+    if(result && !result.stuck && result.paidMonth[origIdx] != null){
+      const m = result.paidMonth[origIdx];
+      paidBy = `<span style="color:${i===0 ? 'var(--gold)' : 'var(--text)'}; font-weight:${i===0 ? '700':'400'}">${payoffDateStr(m)}</span><br><span style="font-size:10px; color:var(--muted)">${m} mo</span>`;
+    } else if(result && result.stuck){
+      paidBy = '<span style="color:var(--red)">never</span>';
+    }
+    return `<tr><td><span class="order-tag">${i+1}</span></td><td>${d.name}${i===0 ? ' <span style="font-size:9px; letter-spacing:1px; color:var(--gold); font-weight:800;">◂ TARGET</span>' : ''}</td>
     <td class="mono" style="text-align:right">${fmt(d.bal)}</td>
     <td class="mono" style="text-align:right">${d.apr}%</td>
     <td class="mono" style="text-align:right">${fmt(d.min)}</td>
+    <td class="mono" style="text-align:right; font-size:12px">${paidBy}</td>
     <td style="text-align:right"><button class="row-btn" onclick="editDebt(${origIdx})">edit</button><button class="row-btn del" onclick="delDebt(${origIdx})">✕</button></td></tr>`;
   }).join('');
   const summary = document.getElementById('payoffSummary');
-  const result = state.debts.length ? simulatePayoff() : null;
   if(result && !result.stuck){
     summary.style.display = 'flex';
     document.getElementById('payoffMonths').textContent = result.months + ' months';
-    const zero = new Date(); zero.setMonth(zero.getMonth() + result.months);
-    document.getElementById('payoffDate').textContent = zero.toLocaleDateString('en-US',{month:'short', year:'numeric'});
+    document.getElementById('payoffDate').textContent = payoffDateStr(result.months);
     document.getElementById('payoffInterest').textContent = fmt(result.interest);
-    document.getElementById('debtFreeStat').textContent = 'Zero date: ' + zero.toLocaleDateString('en-US',{month:'short', year:'numeric'});
+    document.getElementById('debtFreeStat').textContent = 'Zero date: ' + payoffDateStr(result.months);
   } else if(result && result.stuck){
     summary.style.display = 'flex';
     document.getElementById('payoffMonths').textContent = '50+ yrs';
@@ -568,6 +610,77 @@ function renderCollections(){
   document.getElementById('colTotal').textContent = fmt(open.reduce((s,c)=>s+c.amt*0.5,0));
 }
 
+/* ---- Goals ---- */
+function seedGoals(){
+  if(Array.isArray(state.goals)) return;
+  state.goals = [
+    {name:'Get passport', sub:'~$165 book fee — unlock the map', type:'milestone', done:false},
+    {name:'Passive income per month', sub:'money that lands whether you shoot or not', type:'money', target:5000, current:0},
+    {name:'Remote-work pipeline', sub:'first client that doesn\'t care where you are', type:'milestone', done:false}
+  ];
+}
+function addGoal(){
+  const name = goalName.value.trim(), type = goalType.value;
+  const target = +goalTarget.value || 0, current = +goalCurrent.value || 0;
+  if(!name) return;
+  if(state.editingGoal != null){
+    const old = state.goals[state.editingGoal];
+    state.goals[state.editingGoal] = {...old, name, type, target, current};
+    state.editingGoal = null; goalBtn.textContent = 'Add';
+  } else state.goals.push({name, type, target, current, done:false});
+  goalName.value = goalTarget.value = goalCurrent.value = '';
+  save(); renderGoals();
+}
+function editGoal(i){
+  const g = state.goals[i];
+  goalName.value = g.name; goalType.value = g.type;
+  goalTarget.value = g.target || ''; goalCurrent.value = g.current || '';
+  state.editingGoal = i; goalBtn.textContent = 'Save'; goalName.focus();
+}
+function delGoal(i){ state.goals.splice(i,1); state.editingGoal = null; goalBtn.textContent='Add'; save(); renderGoals(); }
+function toggleGoal(i){ state.goals[i].done = !state.goals[i].done; save(); renderGoals(); }
+function renderGoals(){
+  const list = document.getElementById('goalList');
+  if(!list) return;
+  // auto runway goal from live data
+  const burn = state.expenses.reduce((s,e)=>s+e.amt,0) + state.debts.reduce((s,d)=>s+d.min,0);
+  const saved = state.bufferSaved || 0;
+  const runway = burn > 0 ? saved/burn : 0;
+  const goalMo = runway >= 1 ? 3 : 1;
+  const runwayHtml = burn > 0 ? `
+    <div class="goal-row">
+      <span style="width:20px; text-align:center; flex-shrink:0;">${runway >= 3 ? '🏆' : '⚡'}</span>
+      <div class="goal-name">Runway: ${goalMo} month${goalMo>1?'s':''} of survival<small>auto-tracked from buffer ÷ burn</small></div>
+      <div class="goal-bar-wrap">
+        <div class="goal-nums"><b>${runway.toFixed(1)}</b> / ${goalMo}.0 mo</div>
+        <div class="bar-track" style="height:10px;"><div class="bar-fill" style="width:${Math.min(100, runway/goalMo*100)}%"></div></div>
+      </div>
+      <span style="width:60px;"></span>
+    </div>` : '';
+  const rows = state.goals.map((g,i)=>{
+    if(g.type === 'milestone'){
+      return `<div class="goal-row">
+        <input type="checkbox" class="goal-check" ${g.done?'checked':''} onchange="toggleGoal(${i})">
+        <div class="goal-name ${g.done?'done':''}">${g.name}${g.sub?`<small>${g.sub}</small>`:''}</div>
+        <div class="goal-bar-wrap"></div>
+        <span style="width:60px; text-align:right;"><button class="row-btn" onclick="editGoal(${i})">edit</button><button class="row-btn del" onclick="delGoal(${i})">✕</button></span>
+      </div>`;
+    }
+    const pct = g.target > 0 ? Math.min(100, (g.current||0)/g.target*100) : 0;
+    const hit = g.target > 0 && (g.current||0) >= g.target;
+    return `<div class="goal-row">
+      <span style="width:20px; text-align:center; flex-shrink:0;">${hit ? '🏆' : '💰'}</span>
+      <div class="goal-name ${hit?'':''}">${g.name}${g.sub?`<small>${g.sub}</small>`:''}</div>
+      <div class="goal-bar-wrap">
+        <div class="goal-nums"><b>${fmt(g.current||0)}</b> / ${fmt(g.target||0)}</div>
+        <div class="bar-track" style="height:10px;"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span style="width:60px; text-align:right;"><button class="row-btn" onclick="editGoal(${i})">edit</button><button class="row-btn del" onclick="delGoal(${i})">✕</button></span>
+    </div>`;
+  }).join('');
+  list.innerHTML = runwayHtml + (rows || '<div class="empty">No goals yet. What are we chasing?</div>');
+}
+
 /* ---- Stats ---- */
 function renderStats(){
   const fixed = state.expenses.reduce((s,e)=>s+e.amt,0);
@@ -584,6 +697,7 @@ function renderStats(){
   document.getElementById('bufferGoal').textContent = burn > 0 ? fmt(goal) + ` (${goalMonths} mo)` : '— add expenses first';
   document.getElementById('bufferBar').style.width = goal > 0 ? Math.min(100, saved/goal*100) + '%' : '0%';
   document.getElementById('runwaySub').textContent = runway >= 3 ? 'Stable. Now we build wealth.' : runway >= 1 ? 'One month covered. Push to 3.0.' : 'Buffer ÷ monthly burn. Get this to 1.0, then 3.0.';
+  renderGoals();
 }
 
 /* ---- Export / Import ---- */
@@ -610,6 +724,7 @@ function importData(ev){
 }
 
 load(); if(!Array.isArray(state.collections)) state.collections = [];
+seedGoals();
 renderExpenses(); renderDebts(); renderCollections(); renderStats(); renderSplit();
 fbInit();
 </script>
