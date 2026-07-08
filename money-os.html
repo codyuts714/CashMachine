@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONEY OS — UTS</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#131313; --panel2:#1a1a1a; --border:#2a2a2a;
+    --gold:#FED000; --pale:#fff5a4; --text:#e9e9e9; --muted:#8a8a8a;
+    --red:#ff5c5c; --green:#5cd97b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Montserrat',system-ui,sans-serif; padding:24px; min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid var(--gold); padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap; gap:10px;}
+  h1{font-weight:800; letter-spacing:3px; font-size:26px;}
+  h1 span{color:var(--gold);}
+  .tagline{color:var(--muted); font-size:11px; letter-spacing:2px; text-transform:uppercase;}
+  .grid{display:grid; gap:16px;}
+  .stat-row{grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-bottom:22px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;}
+  .card.hero{border-color:var(--gold); background:linear-gradient(160deg,#161403 0%, #131313 55%);}
+  .stat-label{font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;}
+  .stat-value{font-family:'JetBrains Mono',monospace; font-size:32px; font-weight:700;}
+  .stat-value.gold{color:var(--gold);}
+  .stat-value.red{color:var(--red);}
+  .stat-sub{font-size:11px; color:var(--muted); margin-top:6px;}
+  h2{font-size:13px; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); margin-bottom:14px; font-weight:700;}
+  section{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px;}
+  .form-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  input,select,button{font-family:'Montserrat',sans-serif; font-size:13px;}
+  input,select{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 11px; border-radius:6px; outline:none; min-width:0;}
+  input:focus{border-color:var(--gold);}
+  input.grow{flex:2 1 140px;} input.num{flex:1 1 90px;} select{flex:1 1 110px;}
+  button{background:var(--gold); color:#111; border:none; padding:9px 16px; border-radius:6px; font-weight:700; cursor:pointer; letter-spacing:.5px;}
+  button:hover{background:var(--pale);}
+  button.ghost{background:transparent; color:var(--muted); border:1px solid var(--border); font-weight:500;}
+  button.ghost:hover{color:var(--gold); border-color:var(--gold); background:transparent;}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--pale); outline-offset:1px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border); font-weight:700;}
+  td{padding:10px; border-bottom:1px solid #1e1e1e;}
+  td.mono{font-family:'JetBrains Mono',monospace;}
+  tr:last-child td{border-bottom:none;}
+  .row-btn{background:transparent; border:none; color:var(--muted); cursor:pointer; padding:4px 7px; font-size:12px;}
+  .row-btn:hover{color:var(--gold);}
+  .row-btn.del:hover{color:var(--red);}
+  .total-line{display:flex; justify-content:space-between; padding-top:12px; margin-top:6px; border-top:1px solid var(--border); font-weight:700;}
+  .total-line .mono{color:var(--gold);}
+  .split-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-top:14px;}
+  .split-box{background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:14px; text-align:center;}
+  .split-box .pct{color:var(--muted); font-size:11px; margin-bottom:4px;}
+  .split-box .pct input{width:44px; text-align:center; padding:3px 4px; font-size:11px;}
+  .split-box .amt{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--gold);}
+  .split-box .name{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-top:6px;}
+  .bar-track{background:var(--panel2); border:1px solid var(--border); border-radius:20px; height:16px; overflow:hidden; margin-top:10px;}
+  .bar-fill{height:100%; background:linear-gradient(90deg,#8a7100,var(--gold)); border-radius:20px; transition:width .4s ease; min-width:0;}
+  .toggle-group{display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  .toggle-group button{border-radius:0; background:var(--panel2); color:var(--muted); font-weight:600;}
+  .toggle-group button.active{background:var(--gold); color:#111;}
+  .payoff-summary{display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; padding:14px; background:var(--panel2); border-radius:8px; border:1px solid var(--border);}
+  .payoff-summary div{font-size:12px; color:var(--muted);}
+  .payoff-summary strong{display:block; font-family:'JetBrains Mono',monospace; font-size:20px; color:var(--gold); margin-top:2px;}
+  .order-tag{display:inline-block; background:var(--gold); color:#111; font-weight:800; font-size:11px; width:20px; height:20px; line-height:20px; text-align:center; border-radius:50%; margin-right:8px; font-family:'JetBrains Mono',monospace;}
+  .footer-bar{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+  .note{font-size:11px; color:var(--muted); margin-top:10px; line-height:1.5;}
+  .flex-between{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
+  .flex-between h2{margin-bottom:0;}
+  .empty{color:var(--muted); font-size:12px; padding:14px 10px; font-style:italic;}
+  @media (prefers-reduced-motion: reduce){ .bar-fill{transition:none;} }
+  @media (max-width:600px){ body{padding:14px;} .stat-value{font-size:24px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>MONEY <span>OS</span></h1>
+    <div class="tagline">Under The Sun Studios — Bringing Ideas To Light</div>
+  </div>
+  <div class="footer-bar" style="align-items:center;">
+    <span id="syncPill" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); border:1px solid var(--border); padding:5px 10px; border-radius:20px;">Local only</span>
+    <button class="ghost" id="authBtn" onclick="authAction()" style="display:none;">Sign in</button>
+    <button class="ghost" onclick="exportData()">Export backup</button>
+    <button class="ghost" onclick="document.getElementById('importFile').click()">Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</header>
+
+<div class="grid stat-row">
+  <div class="card hero">
+    <div class="stat-label">Runway — months you can survive</div>
+    <div class="stat-value gold" id="runwayStat">0.0</div>
+    <div class="stat-sub" id="runwaySub">Buffer ÷ monthly burn. Get this to 1.0, then 3.0.</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Monthly burn (fixed)</div>
+    <div class="stat-value" id="burnStat">$0</div>
+    <div class="stat-sub">Fixed expenses + debt minimums</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Total debt</div>
+    <div class="stat-value red" id="debtStat">$0</div>
+    <div class="stat-sub" id="debtFreeStat">Add debts below to see your zero date</div>
+  </div>
+</div>
+
+<section>
+  <h2>Income Split — run this on every payment that lands</h2>
+  <div class="form-row">
+    <input type="number" class="num" id="incomeIn" placeholder="Payment amount $" style="flex:1 1 160px;">
+  </div>
+  <div class="split-grid">
+    <div class="split-box">
+      <div class="pct"><input type="number" id="pctTax" value="25" onchange="renderSplit()">%</div>
+      <div class="amt" id="amtTax">$0</div>
+      <div class="name">Taxes</div>
+    </div>
+    <div class="split-box">
+      <div class="pct"><input type="number" id="pctBuffer" value="15" onchange="renderSplit()">%</div>
+      <div class="amt" id="amtBuffer">$0</div>
+      <div class="name">Buffer</div>
+    </div>
+    <div class="split-box">
+      <div class="pct"><input type="number" id="pctDebt" value="10" onchange="renderSplit()">%</div>
+      <div class="amt" id="amtDebt">$0</div>
+      <div class="name">Extra to debt</div>
+    </div>
+    <div class="split-box">
+      <div class="pct"><input type="number" id="pctOps" value="50" onchange="renderSplit()">%</div>
+      <div class="amt" id="amtOps">$0</div>
+      <div class="name">Operating / life</div>
+    </div>
+  </div>
+  <div class="payoff-summary" id="coveragePanel" style="margin-top:14px;">
+    <div>Unpaid bills due in next 14 days<strong id="dueSoonAmt">$0</strong></div>
+    <div>This payment's operating slice<strong id="opsSliceAmt">$0</strong></div>
+    <div>Verdict<strong id="coverageVerdict">—</strong></div>
+  </div>
+  <div class="note" id="splitNote">Percentages are editable. They should total 100.</div>
+</section>
+
+<section>
+  <h2>Fixed Expenses</h2>
+  <div class="form-row">
+    <input class="grow" id="expName" placeholder="Name (rent, car, Adobe...)">
+    <input class="num" type="number" id="expAmt" placeholder="$/month">
+    <input class="num" type="number" id="expDue" placeholder="Due day (1-31)" min="1" max="31">
+    <select id="expCat">
+      <option>Housing</option><option>Transport</option><option>Business</option>
+      <option>Subscriptions</option><option>Insurance</option><option>Utilities</option><option>Other</option>
+    </select>
+    <button onclick="addExpense()" id="expBtn">Add</button>
+  </div>
+  <table>
+    <thead><tr><th>Name</th><th>Category</th><th>Due</th><th style="text-align:right">Monthly</th><th style="text-align:center">Paid</th><th></th></tr></thead>
+    <tbody id="expBody"></tbody>
+  </table>
+  <div class="total-line"><span>Total fixed</span><span class="mono" id="expTotal">$0</span></div>
+  <div class="note">Sorted by what's due next. Check off bills as you pay them — the checks reset automatically each month. Hit <em>auto</em> on anything you put on autopay and it stops asking. End goal: every row says AUTO.</div>
+</section>
+
+<section>
+  <div class="flex-between">
+    <h2>Debt Destruction</h2>
+    <div class="toggle-group">
+      <button id="btnAvalanche" class="active" onclick="setStrategy('avalanche')">Avalanche (rate)</button>
+      <button id="btnSnowball" onclick="setStrategy('snowball')">Snowball (balance)</button>
+    </div>
+  </div>
+  <div class="form-row">
+    <input class="grow" id="debtName" placeholder="Debt name (Visa, car loan...)">
+    <input class="num" type="number" id="debtBal" placeholder="Balance $">
+    <input class="num" type="number" id="debtApr" placeholder="APR %" step="0.1">
+    <input class="num" type="number" id="debtMin" placeholder="Min $/mo">
+    <button onclick="addDebt()" id="debtBtn">Add</button>
+  </div>
+  <table>
+    <thead><tr><th>Order</th><th>Debt</th><th style="text-align:right">Balance</th><th style="text-align:right">APR</th><th style="text-align:right">Min</th><th></th></tr></thead>
+    <tbody id="debtBody"></tbody>
+  </table>
+  <div class="form-row" style="margin-top:14px; align-items:center;">
+    <label style="font-size:12px; color:var(--muted);">Extra payment toward debt each month:</label>
+    <input class="num" type="number" id="extraPay" placeholder="$ extra" onchange="save(); renderDebts();">
+  </div>
+  <div class="payoff-summary" id="payoffSummary" style="display:none;">
+    <div>Debt-free in<strong id="payoffMonths">—</strong></div>
+    <div>Zero date<strong id="payoffDate">—</strong></div>
+    <div>Est. interest paid<strong id="payoffInterest">—</strong></div>
+  </div>
+  <div class="note">Payoff order updates automatically. Pay minimums on everything, throw all extra at the #1 target, then roll its payment into #2.</div>
+</section>
+
+<section>
+  <h2>Collections — separate war, separate rules</h2>
+  <div class="form-row">
+    <input class="grow" id="colName" placeholder="Original debt (old Visa, medical...)">
+    <input class="grow" id="colAgency" placeholder="Who's collecting">
+    <input class="num" type="number" id="colAmt" placeholder="Amount $">
+    <input class="num" type="month" id="colDate" title="Month it first went delinquent">
+    <button onclick="addCollection()" id="colBtn">Add</button>
+  </div>
+  <table>
+    <thead><tr><th>Debt</th><th>Collector</th><th style="text-align:right">Owed</th><th style="text-align:right">Target (50%)</th><th>Status</th><th>Clocks</th><th></th></tr></thead>
+    <tbody id="colBody"></tbody>
+  </table>
+  <div class="total-line"><span>Total if all settled at target</span><span class="mono" id="colTotal">$0</span></div>
+  <div class="note">Clocks: CA generally can't sue after ~4 yrs from delinquency; entries fall off your credit report ~7 yrs after. Validate in writing first, negotiate lump-sum with pay-for-delete, never pay without a written agreement. These do NOT count in your debt zero date — they're settled from saved-up lump sums, not monthly payments.</div>
+</section>
+
+<section>
+  <h2>Buffer Fund</h2>
+  <div class="form-row" style="align-items:center;">
+    <label style="font-size:12px; color:var(--muted);">Currently saved:</label>
+    <input class="num" type="number" id="bufferSaved" placeholder="$" onchange="save(); renderStats();">
+    <label style="font-size:12px; color:var(--muted); margin-left:12px;">Goal:</label>
+    <span class="mono" id="bufferGoal" style="color:var(--gold); font-weight:700;">—</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="bufferBar" style="width:0%"></div></div>
+  <div class="note">Goal = 1 month of burn first. Once you cross it, the goal automatically becomes 3 months.</div>
+</section>
+
+<div class="note" style="text-align:center; padding-bottom:20px;">
+  Data saves in this browser automatically. Use Export backup before switching machines — same pattern as Daily OS.
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const KEY = 'uts-money-os';
+
+/* ============ FIREBASE CONFIG — paste yours here ============ */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE.firebaseapp.com",
+  databaseURL: "https://PASTE-default-rtdb.firebaseio.com",
+  projectId: "PASTE",
+  storageBucket: "PASTE.appspot.com",
+  messagingSenderId: "PASTE",
+  appId: "PASTE"
+};
+/* ============================================================ */
+
+let state = { expenses:[], debts:[], collections:[], strategy:'avalanche', extraPay:0, bufferSaved:0, editingExp:null, editingDebt:null, editingCol:null };
+let memoryOnly = false;
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const s = JSON.parse(raw); state = {...state, ...s, editingExp:null, editingDebt:null}; }
+  }catch(e){ memoryOnly = true; }
+  document.getElementById('extraPay').value = state.extraPay || '';
+  document.getElementById('bufferSaved').value = state.bufferSaved || '';
+  if(state.pcts){ ['Tax','Buffer','Debt','Ops'].forEach(k=>{ if(state.pcts[k]!=null) document.getElementById('pct'+k).value = state.pcts[k]; }); }
+}
+function save(){
+  state.extraPay = +document.getElementById('extraPay').value || 0;
+  state.bufferSaved = +document.getElementById('bufferSaved').value || 0;
+  state.pcts = { Tax:+pctTax.value, Buffer:+pctBuffer.value, Debt:+pctDebt.value, Ops:+pctOps.value };
+  if(!memoryOnly){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ memoryOnly = true; }
+  }
+  if(!fb.applyingRemote) pushState();
+}
+
+/* ---- Firebase sync ---- */
+const fb = { user:null, ref:null, clientId: Math.random().toString(36).slice(2,10), applyingRemote:false, enabled:false };
+let pushTimer = null;
+
+function setSyncStatus(s){
+  const pill = document.getElementById('syncPill');
+  const map = {
+    local:   ['Local only', 'var(--muted)'],
+    signedout:['Sign in to sync', 'var(--pale)'],
+    syncing: ['Syncing…', 'var(--gold)'],
+    synced:  ['Synced', 'var(--green)'],
+    offline: ['Offline — saved locally', 'var(--red)']
+  };
+  pill.textContent = map[s][0]; pill.style.color = map[s][1];
+}
+function fbInit(){
+  if(typeof firebase === 'undefined' || FIREBASE_CONFIG.apiKey.startsWith('PASTE')){ setSyncStatus('local'); return; }
+  try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){ setSyncStatus('local'); return; }
+  fb.enabled = true;
+  document.getElementById('authBtn').style.display = '';
+  firebase.auth().onAuthStateChanged(u=>{
+    fb.user = u;
+    const btn = document.getElementById('authBtn');
+    if(u){ btn.textContent = 'Sign out'; attachRef(); }
+    else{
+      btn.textContent = 'Sign in';
+      if(fb.ref){ fb.ref.off(); fb.ref = null; }
+      setSyncStatus('signedout');
+    }
+  });
+}
+function authAction(){
+  if(!fb.enabled) return;
+  if(fb.user) firebase.auth().signOut();
+  else firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(()=>setSyncStatus('offline'));
+}
+function attachRef(){
+  fb.ref = firebase.database().ref('moneyOS/' + fb.user.uid);
+  setSyncStatus('syncing');
+  fb.ref.on('value', snap=>{
+    const val = snap.val();
+    if(!val){ pushState(true); return; }           // first device seeds the cloud
+    setSyncStatus('synced');
+    if(val._writer === fb.clientId) return;        // echo of our own write — ignore (kills sync loops)
+    fb.applyingRemote = true;
+    state = {...state, ...val.data, editingExp:null, editingDebt:null, editingCol:null};
+    if(!Array.isArray(state.collections)) state.collections = [];
+    document.getElementById('extraPay').value = state.extraPay || '';
+    document.getElementById('bufferSaved').value = state.bufferSaved || '';
+    if(state.pcts){ ['Tax','Buffer','Debt','Ops'].forEach(k=>{ if(state.pcts[k]!=null) document.getElementById('pct'+k).value = state.pcts[k]; }); }
+    renderExpenses(); renderDebts(); renderCollections(); renderStats(); renderSplit();
+    fb.applyingRemote = false;
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }, ()=>setSyncStatus('offline'));
+}
+function pushState(immediate){
+  if(!fb.ref) return;
+  clearTimeout(pushTimer);
+  const doPush = ()=>{
+    setSyncStatus('syncing');
+    fb.ref.set({
+      _writer: fb.clientId, _ts: Date.now(),
+      data: { expenses:state.expenses, debts:state.debts, collections:state.collections,
+              strategy:state.strategy, extraPay:state.extraPay, bufferSaved:state.bufferSaved, pcts:state.pcts }
+    }).then(()=>setSyncStatus('synced')).catch(()=>setSyncStatus('offline'));
+  };
+  immediate ? doPush() : pushTimer = setTimeout(doPush, 600);
+}
+
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+
+/* ---- Income split ---- */
+function renderSplit(){
+  const inc = +document.getElementById('incomeIn').value || 0;
+  const p = { Tax:+pctTax.value||0, Buffer:+pctBuffer.value||0, Debt:+pctDebt.value||0, Ops:+pctOps.value||0 };
+  const total = p.Tax + p.Buffer + p.Debt + p.Ops;
+  for(const k in p) document.getElementById('amt'+k).textContent = fmt(inc * p[k] / 100);
+  const note = document.getElementById('splitNote');
+  note.textContent = total === 100 ? 'Percentages are editable. They should total 100.' : `Heads up — your percentages total ${total}%, not 100%.`;
+  note.style.color = total === 100 ? '' : 'var(--red)';
+  // Coverage: unpaid, non-auto-checked bills due within 14 days (autopay still leaves your account, so it counts)
+  const dueSoon = state.expenses.reduce((s,e)=>{
+    if(!e.due) return s;
+    if(e.paid === monthKey()) return s;
+    const days = daysUntil(nextDue(e.due));
+    return (days <= 14 || isOverdue(e)) ? s + e.amt : s;
+  }, 0);
+  const ops = inc * p.Ops / 100;
+  document.getElementById('dueSoonAmt').textContent = fmt(dueSoon);
+  document.getElementById('opsSliceAmt').textContent = fmt(ops);
+  const verdict = document.getElementById('coverageVerdict');
+  if(inc === 0){ verdict.textContent = '—'; verdict.style.color = ''; }
+  else if(ops >= dueSoon){ verdict.textContent = 'Covered ✓'; verdict.style.color = 'var(--green)'; }
+  else { verdict.textContent = 'Short ' + fmt(dueSoon - ops); verdict.style.color = 'var(--red)'; }
+  save();
+}
+document.getElementById('incomeIn').addEventListener('input', renderSplit);
+
+/* ---- Expenses ---- */
+const monthKey = () => new Date().toISOString().slice(0,7);
+function nextDue(day){
+  if(!day) return null;
+  const now = new Date();
+  const dim = m => new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  let d = new Date(now.getFullYear(), now.getMonth(), Math.min(day, dim(now)));
+  if(d < new Date(now.getFullYear(), now.getMonth(), now.getDate())){
+    const nm = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    d = new Date(nm.getFullYear(), nm.getMonth(), Math.min(day, dim(nm)));
+  }
+  return d;
+}
+function daysUntil(d){
+  const now = new Date();
+  return Math.round((d - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+}
+function isPaid(e){ return e.auto || e.paid === monthKey(); }
+function isOverdue(e){
+  if(!e.due || isPaid(e)) return false;
+  return new Date().getDate() > e.due;
+}
+function addExpense(){
+  const name = expName.value.trim(), amt = +expAmt.value, cat = expCat.value;
+  let due = +expDue.value || null; if(due) due = Math.min(31, Math.max(1, due));
+  if(!name || !amt) return;
+  if(state.editingExp !== null){
+    const old = state.expenses[state.editingExp];
+    state.expenses[state.editingExp] = {...old, name, amt, cat, due};
+    state.editingExp = null; expBtn.textContent = 'Add';
+  }
+  else state.expenses.push({name, amt, cat, due, paid:null, auto:false});
+  expName.value = ''; expAmt.value = ''; expDue.value = '';
+  save(); renderExpenses(); renderStats(); renderSplit();
+}
+function editExpense(i){
+  const e = state.expenses[i];
+  expName.value = e.name; expAmt.value = e.amt; expCat.value = e.cat; expDue.value = e.due || '';
+  state.editingExp = i; expBtn.textContent = 'Save'; expName.focus();
+}
+function delExpense(i){ state.expenses.splice(i,1); state.editingExp = null; expBtn.textContent='Add'; save(); renderExpenses(); renderStats(); renderSplit(); }
+function togglePaid(i){
+  const e = state.expenses[i];
+  e.paid = (e.paid === monthKey()) ? null : monthKey();
+  save(); renderExpenses(); renderSplit();
+}
+function toggleAuto(i){
+  state.expenses[i].auto = !state.expenses[i].auto;
+  save(); renderExpenses(); renderSplit();
+}
+function renderExpenses(){
+  const body = document.getElementById('expBody');
+  if(!state.expenses.length){ body.innerHTML = '<tr><td colspan="6" class="empty">No fixed expenses yet. Add rent first — with its due day.</td></tr>'; }
+  else {
+    const rows = state.expenses.map((e,i)=>({e,i}))
+      .sort((a,b)=>{
+        const da = a.e.due ? daysUntil(nextDue(a.e.due)) : 99, db = b.e.due ? daysUntil(nextDue(b.e.due)) : 99;
+        return da - db;
+      });
+    body.innerHTML = rows.map(({e,i})=>{
+      let dueCell = '<span style="color:var(--muted)">—</span>';
+      if(e.due){
+        const days = daysUntil(nextDue(e.due));
+        const when = days === 0 ? '<span style="color:var(--gold)">today</span>' : days === 1 ? 'tomorrow' : 'in ' + days + 'd';
+        dueCell = isOverdue(e)
+          ? `${e.due}<sup>${ord(e.due)}</sup> · <span style="color:var(--red); font-weight:700">overdue</span>`
+          : isPaid(e) && !e.auto ? `${e.due}<sup>${ord(e.due)}</sup> · <span style="color:var(--green)">paid</span>`
+          : `${e.due}<sup>${ord(e.due)}</sup> · ${when}`;
+      }
+      const paidCell = e.auto
+        ? '<span style="background:var(--gold); color:#111; font-size:9px; font-weight:800; letter-spacing:1px; padding:3px 7px; border-radius:4px;">AUTO</span>'
+        : `<input type="checkbox" ${e.paid === monthKey() ? 'checked' : ''} onchange="togglePaid(${i})" style="accent-color:var(--gold); width:16px; height:16px; cursor:pointer;">`;
+      return `<tr><td>${e.name}</td><td style="color:var(--muted)">${e.cat}</td>
+      <td style="font-size:12px">${dueCell}</td>
+      <td class="mono" style="text-align:right">${fmt(e.amt)}</td>
+      <td style="text-align:center">${paidCell}</td>
+      <td style="text-align:right"><button class="row-btn" onclick="toggleAuto(${i})" title="Toggle autopay">${e.auto ? 'manual' : 'auto'}</button><button class="row-btn" onclick="editExpense(${i})">edit</button><button class="row-btn del" onclick="delExpense(${i})">✕</button></td></tr>`;
+    }).join('');
+  }
+  document.getElementById('expTotal').textContent = fmt(state.expenses.reduce((s,e)=>s+e.amt,0));
+}
+const ord = n => n>3 && n<21 ? 'th' : ['th','st','nd','rd'][Math.min(n%10,4)] || 'th';
+
+/* ---- Debts ---- */
+function addDebt(){
+  const name = debtName.value.trim(), bal = +debtBal.value, apr = +debtApr.value||0, min = +debtMin.value||0;
+  if(!name || !bal) return;
+  if(state.editingDebt !== null){ state.debts[state.editingDebt] = {name, bal, apr, min}; state.editingDebt = null; debtBtn.textContent='Add'; }
+  else state.debts.push({name, bal, apr, min});
+  debtName.value = debtBal.value = debtApr.value = debtMin.value = '';
+  save(); renderDebts(); renderStats();
+}
+function editDebt(i){
+  const d = state.debts[i];
+  debtName.value = d.name; debtBal.value = d.bal; debtApr.value = d.apr; debtMin.value = d.min;
+  state.editingDebt = i; debtBtn.textContent = 'Save'; debtName.focus();
+}
+function delDebt(i){ state.debts.splice(i,1); state.editingDebt = null; debtBtn.textContent='Add'; save(); renderDebts(); renderStats(); }
+function setStrategy(s){
+  state.strategy = s;
+  btnAvalanche.classList.toggle('active', s==='avalanche');
+  btnSnowball.classList.toggle('active', s==='snowball');
+  save(); renderDebts();
+}
+function sortedDebts(){
+  return [...state.debts].sort((a,b)=> state.strategy==='avalanche' ? b.apr - a.apr : a.bal - b.bal);
+}
+function simulatePayoff(){
+  let debts = sortedDebts().map(d=>({...d}));
+  const extra = +document.getElementById('extraPay').value || 0;
+  const totalMin = debts.reduce((s,d)=>s+d.min,0);
+  if(!debts.length) return null;
+  let months = 0, interest = 0;
+  while(debts.some(d=>d.bal > 0) && months < 600){
+    months++;
+    let pool = totalMin + extra;
+    for(const d of debts){
+      if(d.bal <= 0) continue;
+      const monthInterest = d.bal * (d.apr/100/12);
+      interest += monthInterest; d.bal += monthInterest;
+      const pay = Math.min(d.min, d.bal, pool); d.bal -= pay; pool -= pay;
+    }
+    for(const d of debts){
+      if(pool <= 0) break;
+      if(d.bal > 0){ const pay = Math.min(pool, d.bal); d.bal -= pay; pool -= pay; }
+    }
+    if(pool === totalMin + extra) break; // nothing payable — mins are zero
+  }
+  if(months >= 600) return {stuck:true};
+  return {months, interest};
+}
+function renderDebts(){
+  const body = document.getElementById('debtBody');
+  const sorted = sortedDebts();
+  if(!sorted.length){ body.innerHTML = '<tr><td colspan="6" class="empty">No debts added. Add every balance — cards, loans, collections, all of it.</td></tr>'; }
+  else body.innerHTML = sorted.map((d,i)=>{
+    const origIdx = state.debts.indexOf(d);
+    return `<tr><td><span class="order-tag">${i+1}</span></td><td>${d.name}</td>
+    <td class="mono" style="text-align:right">${fmt(d.bal)}</td>
+    <td class="mono" style="text-align:right">${d.apr}%</td>
+    <td class="mono" style="text-align:right">${fmt(d.min)}</td>
+    <td style="text-align:right"><button class="row-btn" onclick="editDebt(${origIdx})">edit</button><button class="row-btn del" onclick="delDebt(${origIdx})">✕</button></td></tr>`;
+  }).join('');
+  const summary = document.getElementById('payoffSummary');
+  const result = state.debts.length ? simulatePayoff() : null;
+  if(result && !result.stuck){
+    summary.style.display = 'flex';
+    document.getElementById('payoffMonths').textContent = result.months + ' months';
+    const zero = new Date(); zero.setMonth(zero.getMonth() + result.months);
+    document.getElementById('payoffDate').textContent = zero.toLocaleDateString('en-US',{month:'short', year:'numeric'});
+    document.getElementById('payoffInterest').textContent = fmt(result.interest);
+    document.getElementById('debtFreeStat').textContent = 'Zero date: ' + zero.toLocaleDateString('en-US',{month:'short', year:'numeric'});
+  } else if(result && result.stuck){
+    summary.style.display = 'flex';
+    document.getElementById('payoffMonths').textContent = '50+ yrs';
+    document.getElementById('payoffDate').textContent = 'Raise payments';
+    document.getElementById('payoffInterest').textContent = '—';
+  } else { summary.style.display = 'none'; }
+  renderStats();
+}
+
+/* ---- Collections ---- */
+const COL_STATUSES = ['Need to validate','Validation sent','Negotiating','Settlement agreed','Paid / deleted'];
+function addCollection(){
+  const name = colName.value.trim(), agency = colAgency.value.trim(), amt = +colAmt.value, date = colDate.value;
+  if(!name || !amt) return;
+  if(state.editingCol != null){
+    const old = state.collections[state.editingCol];
+    state.collections[state.editingCol] = {...old, name, agency, amt, date};
+    state.editingCol = null; colBtn.textContent = 'Add';
+  } else state.collections.push({name, agency, amt, date, status: COL_STATUSES[0]});
+  colName.value = colAgency.value = colAmt.value = colDate.value = '';
+  save(); renderCollections();
+}
+function editCollection(i){
+  const c = state.collections[i];
+  colName.value = c.name; colAgency.value = c.agency || ''; colAmt.value = c.amt; colDate.value = c.date || '';
+  state.editingCol = i; colBtn.textContent = 'Save'; colName.focus();
+}
+function delCollection(i){ state.collections.splice(i,1); state.editingCol = null; colBtn.textContent='Add'; save(); renderCollections(); }
+function setColStatus(i, val){ state.collections[i].status = val; save(); renderCollections(); }
+function clockInfo(dateStr){
+  if(!dateStr) return '<span style="color:var(--muted)">add date</span>';
+  const d = new Date(dateStr + '-01'), now = new Date();
+  const sue = new Date(d); sue.setFullYear(sue.getFullYear() + 4);
+  const off = new Date(d); off.setFullYear(off.getFullYear() + 7);
+  const fmtD = x => x.toLocaleDateString('en-US',{month:'short', year:'numeric'});
+  const sueTag = now > sue ? '<span style="color:var(--green)">likely time-barred</span>' : 'sue window ~' + fmtD(sue);
+  return sueTag + '<br><span style="color:var(--muted)">off report ~' + fmtD(off) + '</span>';
+}
+function renderCollections(){
+  const body = document.getElementById('colBody');
+  if(!state.collections.length){ body.innerHTML = '<tr><td colspan="7" class="empty">Nothing here yet. Pull your reports at annualcreditreport.com and add each one.</td></tr>'; }
+  else body.innerHTML = state.collections.map((c,i)=>`
+    <tr><td>${c.name}</td><td style="color:var(--muted)">${c.agency||'—'}</td>
+    <td class="mono" style="text-align:right">${fmt(c.amt)}</td>
+    <td class="mono" style="text-align:right; color:var(--gold)">${fmt(c.amt*0.5)}</td>
+    <td><select onchange="setColStatus(${i}, this.value)" style="font-size:11px; padding:5px;">${COL_STATUSES.map(s=>`<option ${s===c.status?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td style="font-size:11px; line-height:1.5">${clockInfo(c.date)}</td>
+    <td style="text-align:right"><button class="row-btn" onclick="editCollection(${i})">edit</button><button class="row-btn del" onclick="delCollection(${i})">✕</button></td></tr>`).join('');
+  const open = state.collections.filter(c=>c.status !== 'Paid / deleted');
+  document.getElementById('colTotal').textContent = fmt(open.reduce((s,c)=>s+c.amt*0.5,0));
+}
+
+/* ---- Stats ---- */
+function renderStats(){
+  const fixed = state.expenses.reduce((s,e)=>s+e.amt,0);
+  const mins = state.debts.reduce((s,d)=>s+d.min,0);
+  const burn = fixed + mins;
+  const totalDebt = state.debts.reduce((s,d)=>s+d.bal,0);
+  const saved = +document.getElementById('bufferSaved').value || 0;
+  document.getElementById('burnStat').textContent = fmt(burn);
+  document.getElementById('debtStat').textContent = fmt(totalDebt);
+  const runway = burn > 0 ? saved / burn : 0;
+  document.getElementById('runwayStat').textContent = runway.toFixed(1);
+  const goalMonths = runway >= 1 ? 3 : 1;
+  const goal = burn * goalMonths;
+  document.getElementById('bufferGoal').textContent = burn > 0 ? fmt(goal) + ` (${goalMonths} mo)` : '— add expenses first';
+  document.getElementById('bufferBar').style.width = goal > 0 ? Math.min(100, saved/goal*100) + '%' : '0%';
+  document.getElementById('runwaySub').textContent = runway >= 3 ? 'Stable. Now we build wealth.' : runway >= 1 ? 'One month covered. Push to 3.0.' : 'Buffer ÷ monthly burn. Get this to 1.0, then 3.0.';
+}
+
+/* ---- Export / Import ---- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'money-os-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      state = {...state, ...JSON.parse(reader.result), editingExp:null, editingDebt:null};
+      document.getElementById('extraPay').value = state.extraPay || '';
+      document.getElementById('bufferSaved').value = state.bufferSaved || '';
+      if(!Array.isArray(state.collections)) state.collections = [];
+      save(); renderExpenses(); renderDebts(); renderCollections(); renderStats(); renderSplit();
+    }catch(e){ alert('Could not read that backup file.'); }
+  };
+  reader.readAsText(file);
+}
+
+load(); if(!Array.isArray(state.collections)) state.collections = [];
+renderExpenses(); renderDebts(); renderCollections(); renderStats(); renderSplit();
+fbInit();
+</script>
+</body>
+</html>
